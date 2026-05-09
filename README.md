@@ -1,161 +1,82 @@
-<div align="center">
+# 🔧 Realtor Sales Autopilot — Zero-Subscription Outbound Engine
 
-# 📞 Realtor Sales Autopilot
+> **Status:** Working automation system · ADB call routing functional · Google Sheets + Email integrated
 
-**Zero-subscription outbound sales automation using your Android phone as a gateway.**
-
-[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Node.js](https://img.shields.io/badge/Node.js-18%2B-green?logo=nodedotjs)](https://nodejs.org)
-[![ADB](https://img.shields.io/badge/Android-ADB%20Powered-brightgreen?logo=android)](https://developer.android.com/tools/adb)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Node.js 18+](https://img.shields.io/badge/node-18+-green)](https://nodejs.org)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
-[![No Subscription](https://img.shields.io/badge/Cost-Zero%20Subscription-gold)]()
-
-*No Twilio. No per-minute charges. Just your phone + ADB + Node.js.*
-
-[Features](#-features) · [How It Works](#-how-it-works) · [Quick Start](#-quick-start) · [Configuration](#-configuration) · [Architecture](#-architecture)
-
-</div>
 
 ---
 
-## ✨ Features
+## 🎯 What This Is
 
-- 📱 **ADB-powered calling** — Uses your real Android phone (via USB) to place actual cellular calls — zero per-minute cost
-- 🤖 **Answering Machine Detection (AMD)** — Automatically detects voicemail vs. human answer using call duration heuristics
-- 🔁 **Sequential Hunt Group** — Calls Agent 1 → Agent 2 → ... until someone answers
-- 📊 **Google Sheets CRM** — Reads leads from and writes call outcomes to a Google Sheet — no database needed
-- 📩 **Automated fallback** — Sends WhatsApp Cloud API message + Gmail email if all agents miss the call
-- 🖥️ **Live Dashboard** — Real-time call status panel for managers (Node.js express server)
-- 🔁 **Dry-run mode** — Full simulation without placing real calls (default: `DRY_RUN=true`)
+A **zero-subscription outbound sales automation system** for Indian real estate agents. Uses an Android phone (via ADB) as the call gateway — no expensive VoIP subscriptions, no third-party dialers. Built for solo agents and small teams managing 50–200 daily lead calls.
 
----
-
-## 🔧 How It Works
-
+**Core flow:**
 ```
-Google Sheets (Lead List)
-        ↓
-  Pull next lead
-        ↓
-  ADB → Android phone → Real cellular call
-        ↓
-  AMD heuristic (call duration)
-        ↓
-  ┌─────────────────────────────────────────┐
-  │ Human answered?  → Connect to Agent     │
-  │ Voicemail?       → Send WA + Email      │
-  │ No answer?       → Send WA + Email      │
-  └─────────────────────────────────────────┘
-        ↓
-  Log outcome → Google Sheet (Call Log tab)
+Google Sheets (leads) → Orchestrator → ADB call → 
+  ├── Human answered → Agent screen pop on dashboard
+  ├── No answer → Voicemail → WhatsApp follow-up
+  └── Voicemail detected → Email follow-up + next-call schedule
 ```
 
 ---
 
-## ⚡ Quick Start
+## ✅ What Actually Works
 
-### Prerequisites
+| Feature | Status |
+|---------|--------|
+| ADB call initiation (Android phone as gateway) | ✅ Working |
+| Google Sheets lead ingestion | ✅ Working |
+| Call state machine (ring/answer/no-answer/voicemail) | ✅ Working |
+| Gmail SMTP follow-up emails | ✅ Working |
+| WhatsApp Cloud API follow-ups | ✅ Working (requires Meta approval) |
+| Real-time manager dashboard (WebSocket) | ✅ Working |
+| Agent screen pop on incoming connection | ✅ Working |
+| Config validator (`npm run validate`) | ✅ Working |
+| Dry-run simulation (`npm run simulate`) | ✅ Working |
 
-- **Node.js 18+**
-- **Android phone** connected via USB with ADB enabled
-- **ADB Platform Tools** (download [here](https://developer.android.com/tools/releases/platform-tools))
-- **Google Service Account** with Sheets API enabled ([guide](https://developers.google.com/sheets/api/quickstart/nodejs))
+---
 
-### Install
+## ❌ What We Have NOT Yet Achieved
+
+### 1. True AMD (Answering Machine Detection)
+Current voicemail detection is heuristic-based (call duration + silence detection). Professional-grade AMD using audio fingerprinting or ML requires the call audio stream — which ADB does not expose.
+
+### 2. Spam Tag Avoidance
+High-volume calling from a single number leads to spam tagging by carriers. No CNAM (Caller ID Name) management or number rotation is implemented.
+
+### 3. WhatsApp Without Meta Approval
+The Meta WhatsApp Business API requires business verification (typically 2–4 weeks). Until then, WhatsApp messages are skipped — the system falls back to email only.
+
+### 4. Multi-Agent Routing
+The hunt group currently calls Agent 1, then Agent 2, sequentially. No skill-based routing or load balancing across concurrent calls.
+
+---
+
+## 🚀 Quick Start
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/realtor-sales-autopilot.git
+git clone https://github.com/GokulDubbaka/realtor-sales-autopilot.git
 cd realtor-sales-autopilot
-
 npm install
-
-# Copy the env template and fill in your values
-cp setup.env.template .env
-# Edit .env — see Configuration section below
+cp setup.env.template .env        # fill in your credentials
+npm run validate                  # check all configs
+npm run simulate                  # dry run (no real calls)
+npm start                         # live mode — requires connected Android device
 ```
 
-### Authorize Your Android Device
-
-```bash
-# List connected devices
-./platform-tools/adb devices
-
-# Should show your device serial number
-# If unauthorized: check your phone screen and tap "Allow"
-```
-
-### Validate Setup (Dry Run)
-
-```bash
-node scripts/validate.js
-```
-
-### Run a Simulation
-
-```bash
-node scripts/simulate.js
-```
-
-### Start the Bot
-
-```bash
-node src/index.js
-```
+**Android setup:** Connect Poco C61 (or any Android 9+) via USB, enable USB debugging, set `ADB_PATH` in `.env`.
 
 ---
 
-## ⚙️ Configuration
+## 🤝 How You Can Help
 
-Copy `setup.env.template` to `.env` and fill in:
-
-| Variable | Description |
-|---|---|
-| `ADB_PATH` | Path to `adb.exe` (e.g. `./platform-tools/adb.exe`) |
-| `ADB_DEVICE` | Your device serial (from `adb devices`) |
-| `AGENT_1_NAME` | First agent's name |
-| `AGENT_1_PHONE` | First agent's phone number (`+91XXXXXXXXXX`) |
-| `GOOGLE_SERVICE_ACCOUNT_EMAIL` | Service account email |
-| `GOOGLE_PRIVATE_KEY` | Service account private key (from JSON file) |
-| `GOOGLE_SPREADSHEET_ID` | Google Sheet ID from the URL |
-| `META_WA_PHONE_NUMBER_ID` | WhatsApp Cloud API phone number ID |
-| `META_WA_ACCESS_TOKEN` | WhatsApp Cloud API access token |
-| `SMTP_USER` | Gmail address |
-| `SMTP_PASS` | Gmail App Password (not your regular password) |
-| `DRY_RUN` | `true` = simulate only, `false` = real calls |
-
-> **Security:** Never commit your `.env` file. It is listed in `.gitignore`.
-
-### Google Sheet Structure
-
-Your sheet should have these tabs:
-- **Clients** — Lead list with columns: `Name`, `Phone`, `Status`
-- **Missed Calls** — Auto-populated by the bot
-- **Call Log** — Full call history with timestamps and outcomes
-
----
-
-## 🗂️ Architecture
-
-```
-realtor-sales-autopilot/
-├── src/
-│   ├── index.js              # 🚀 Entry point — main orchestration loop
-│   ├── config.js             # Environment config loader
-│   ├── core/                 # ADB caller, AMD logic, hunt group
-│   ├── services/             # Google Sheets, WhatsApp, Email services
-│   └── dashboard/            # Live manager dashboard (Express)
-├── scripts/
-│   ├── simulate.js           # Full dry-run simulation
-│   └── validate.js           # Environment validation checker
-├── setup.env.template        # Environment variable template
-└── platform-tools/           # ADB binaries (not committed to git)
-```
-
----
-
-## 🤝 Contributing
-
-Contributions welcome! See [CONTRIBUTING.md](CONTRIBUTING.md).
+- **Real AMD:** Integrate Twilio's AMD API or a local audio classifier for accurate voicemail detection
+- **Call recording:** Capture and transcribe call audio for CRM notes (requires audio access beyond ADB)
+- **CRM integrations:** Push lead status to HubSpot / Zoho CRM automatically
+- **Multi-number rotation:** Rotate outbound caller IDs to reduce spam tagging
+- **iOS support:** Extend beyond ADB to support iPhone call initiation (Shortcuts API)
 
 ---
 

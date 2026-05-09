@@ -1,0 +1,19 @@
+# Node
+node_modules/
+npm-debug.log*
+
+# Environment — NEVER COMMIT
+.env
+*.env
+
+# Android tools — do not commit binaries
+platform-tools/
+
+# Logs
+logs/
+*.log
+*.jsonl
+
+# OS
+.DS_Store
+Thumbs.db
